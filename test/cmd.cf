@@ -1,0 +1,4 @@
++libext+.v+.sv
++libdir+../rtl/
++incdir+../rtl/include/
++timescale+1ns/1ns
