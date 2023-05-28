@@ -1,11 +1,11 @@
 module mult_add #(
-    parameter I_BIT_WIDTH = 8,
-    parameter K_SIZE = 3,
-    parameter O_BIT_WIDTH = 16
+    parameter I_BIT_WIDTH   = 8,
+    parameter O_BIT_WIDTH   = 32,
+    parameter K_SIZE        = 3
 )(
-    input   signed [I_BIT_WIDTH*K_SIZE*K_SIZE-1:0]  in,
-    input   signed [I_BIT_WIDTH*K_SIZE*K_SIZE-1:0]  weights,
-    output  signed [O_BIT_WIDTH-1:0]                convValue
+    input       signed [I_BIT_WIDTH*K_SIZE*K_SIZE-1:0]  in,
+    input       signed [I_BIT_WIDTH*K_SIZE*K_SIZE-1:0]  weights,
+    output wire signed [O_BIT_WIDTH-1:0]                convValue
 );
 
     wire signed [O_BIT_WIDTH-1:0] mul[0:K_SIZE*K_SIZE-1];

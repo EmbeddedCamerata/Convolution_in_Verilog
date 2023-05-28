@@ -1,8 +1,9 @@
 module conv_with_buffer #(
-    parameter I_BIT_WIDTH = 8,
-    parameter I_SIZE = 5,
-    parameter K_CHANNELS = 3,
-    parameter K_SIZE = 3
+    parameter I_BIT_WIDTH   = 8,
+    parameter O_BIT_WIDTH   = 4*I_BIT_WIDTH,
+    parameter I_SIZE        = 5,
+    parameter K_CHANNELS    = 3,
+    parameter K_SIZE        = 3
 )(
     input       clk,
     input       rstn,
@@ -20,16 +21,17 @@ module conv_with_buffer #(
     wire weights_buf_cs;
     wire [15:0] weights_buf_addr;
 
+    wire signed [4*I_BIT_WIDTH-1:0] result_buf_din;
     wire result_buf_wen;
     wire result_buf_cs;
     wire [15:0] result_buf_addr;
-    wire signed [2*I_BIT_WIDTH-1:0] result_buf_din;
 
     conv #(
-        .I_BIT_WIDTH(I_BIT_WIDTH),
-        .I_SIZE(I_SIZE),
-        .K_CHANNELS(K_CHANNELS),
-        .K_SIZE(K_SIZE)
+        .I_BIT_WIDTH        (I_BIT_WIDTH),
+        .O_BIT_WIDTH        (O_BIT_WIDTH),
+        .I_SIZE             (I_SIZE),
+        .K_CHANNELS         (K_CHANNELS),
+        .K_SIZE             (K_SIZE)
     ) u_conv(
         .clk                (clk),
         .rstn               (rstn),
@@ -46,10 +48,10 @@ module conv_with_buffer #(
         .weights_buf_cs     (weights_buf_cs),
         .weights_buf_addr   (weights_buf_addr),
 
+        .result_buf_din     (result_buf_din),
         .result_buf_wen     (result_buf_wen),
         .result_buf_cs      (result_buf_cs),
-        .result_buf_addr    (result_buf_addr),
-        .result_buf_din     (result_buf_din)
+        .result_buf_addr    (result_buf_addr)
     );
 
     gbuffer #(
@@ -81,7 +83,7 @@ module conv_with_buffer #(
     );
 
     gbuffer #(
-        .DATA_WIDTH(2*I_BIT_WIDTH),
+        .DATA_WIDTH(O_BIT_WIDTH),
         .ADDR_WIDTH(16)
     ) r_gbuffer(
         .clk    (clk),

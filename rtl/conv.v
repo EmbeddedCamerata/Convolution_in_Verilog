@@ -1,8 +1,11 @@
+`include "config.vh"
+
 module conv #(
-    parameter I_BIT_WIDTH = 8,
-    parameter I_SIZE = 5,
-    parameter K_CHANNELS = 3,
-    parameter K_SIZE = 3
+    parameter I_BIT_WIDTH   = 8,
+    parameter O_BIT_WIDTH   = 4*I_BIT_WIDTH,
+    parameter I_SIZE        = 5,
+    parameter K_CHANNELS    = 3,
+    parameter K_SIZE        = 3
 )(
     input                                   clk,
     input                                   rstn,
@@ -12,18 +15,18 @@ module conv #(
     // Interface to input bram
     input       signed  [I_BIT_WIDTH-1:0]   input_bram_douta,
     output reg                              input_bram_ena,
-    output reg          [14:0]              input_bram_addra,
+    output reg          [15:0]              input_bram_addra,
 
     // Interface to weight bram
     input       signed  [I_BIT_WIDTH-1:0]   weights_bram_douta,
     output reg                              weights_bram_ena,
-    output reg          [I_BIT_WIDTH-1:0]   weights_bram_addra,
+    output reg          [15:0]              weights_bram_addra,
 
     // Interface to result bram
     output reg                              result_bram_ena,
     output reg                              result_bram_wea,
-    output reg          [12:0]              result_bram_addra,
-    output reg  signed  [2*I_BIT_WIDTH-1:0] result_bram_dina,
+    output reg          [15:0]              result_bram_addra,
+    output reg  signed  [O_BIT_WIDTH-1:0]   result_bram_dina,
 `else
     input       signed  [I_BIT_WIDTH-1:0]   input_buf_dout,
     output reg                              input_buf_ren,
@@ -35,10 +38,10 @@ module conv #(
     output reg                              weights_buf_cs,
     output reg          [15:0]              weights_buf_addr,
 
+    output reg  signed  [O_BIT_WIDTH-1:0]   result_buf_din,
     output reg                              result_buf_wen,
     output reg                              result_buf_cs,
     output reg          [15:0]              result_buf_addr,
-    output reg  signed  [2*I_BIT_WIDTH-1:0] result_buf_din,
 `endif
     output reg                              conv_done
 );
@@ -57,16 +60,16 @@ module conv #(
 
     reg signed [I_BIT_WIDTH*K_SIZE*K_SIZE-1:0] inputs[0:K_CHANNELS-1];
     reg signed [I_BIT_WIDTH*K_SIZE*K_SIZE-1:0] weights[0:K_CHANNELS-1];
-    wire signed [2*I_BIT_WIDTH-1:0] dout[0:K_CHANNELS-1];
-    reg signed [2*I_BIT_WIDTH-1:0] result[0:K_CHANNELS-1];
+    wire signed [O_BIT_WIDTH-1:0] dout[0:K_CHANNELS-1];
+    reg signed [O_BIT_WIDTH-1:0] result[0:K_CHANNELS-1];
 
     genvar i;
     generate
         for (i = 0; i < K_CHANNELS; i=i+1) begin: Gen_PE_array
             mult_add #(
                 .I_BIT_WIDTH(I_BIT_WIDTH),
-                .K_SIZE(K_SIZE),
-                .O_BIT_WIDTH(2*I_BIT_WIDTH)
+                .O_BIT_WIDTH(O_BIT_WIDTH),
+                .K_SIZE     (K_SIZE)
             ) u_mult_add (
                 .in         (inputs[i]),
                 .weights    (weights[i]),
@@ -91,12 +94,12 @@ module conv #(
             cstate <= nstate;
     end
 
-    parameter S_IDLE          = 6'b000001,
-              S_LOAD_WEIGHTS  = 6'b000010,
-              S_CHECK         = 6'b000100,
-              S_LOAD_DATA     = 6'b001000,
-              S_CONVOLUTE     = 6'b010000,
-              S_STORE_RESULT  = 6'b100000;
+    localparam  S_IDLE        = 6'b000001,
+                S_LOAD_WEIGHTS= 6'b000010,
+                S_CHECK       = 6'b000100,
+                S_LOAD_DATA   = 6'b001000,
+                S_CONV        = 6'b010000,
+                S_STORE_RESULT= 6'b100000;
 
     always @(*) begin
         case (cstate)
@@ -110,8 +113,8 @@ module conv #(
                     nstate = S_LOAD_DATA;
             end
 
-            S_LOAD_DATA: if (i_ch >= K_CHANNELS) nstate = S_CONVOLUTE;
-            S_CONVOLUTE: nstate = S_STORE_RESULT;
+            S_LOAD_DATA: if (i_ch >= K_CHANNELS) nstate = S_CONV;
+            S_CONV: nstate = S_STORE_RESULT;
             S_STORE_RESULT: if (o_ch >= O_CHANNELS) nstate = S_CHECK;
 
             default: nstate = S_IDLE;
@@ -306,7 +309,7 @@ module conv #(
                     end
                 end
 
-                S_CONVOLUTE: begin
+                S_CONV: begin
                     for (j = 0; j < K_CHANNELS; j=j+1)
                         result[j] <= dout[j];
                 end
@@ -390,9 +393,6 @@ module conv #(
                     conv_done <= 1'b0;
                 end
             endcase
-        end
-        else begin
-
         end
     end
 
